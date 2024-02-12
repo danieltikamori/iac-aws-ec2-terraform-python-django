@@ -10,20 +10,17 @@ terraform {
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  region = "us-west-2"
 }
 
-resource "aws_instance" "app_server" {
+resource "aws_instance" "app_server-1" {
   ami           = "ami-01e82af4e524a0aa3"
   instance_type = "t2.micro"
-  key_name = "first-tkmr"
- # user_data = <<-EOF
- #             #!/bin/bash
- #             cd /home/ec2-user
- #             echo "<h1>Hello, World<h1>" > index.html
- #             nohup busybox httpd -f -p 8080 &
- #             EOF
+  key_name      = "the key name to used for ssh"
+
+  user_data = file("bootstrap.sh")
+
   tags = {
-    Name = "tkmr-server-1"
+    Name = "test-1"
   }
 }
