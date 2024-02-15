@@ -10,6 +10,41 @@ This project is an example of how to use Terraform, Ansible, and AWS to deploy a
 - Ansible
 - AWS account
 
+## Creating SSH keys and configuring the keys
+
+### Creating SSH keys
+
+Create at least 2 keys. The first will be for Development environment and the second for Production environment.
+
+At the project directory, open the Terminal.
+Run:
+```bash
+ssh-keygen -t ed25519 -C "your_email@example.com"
+```
+
+Note: Replace the “your_email@example.com” with your email address (this is a comment for your SSH key)
+
+Whenever you enter the above command, it will ask you some questions like file name and location, and also a passphrase for your key. It’s recommended to use a passphrase for more security and access control.
+
+The first key, type for example `./IaC-DEV`.
+The second key, type for example `./IaC-PROD`.
+
+### Make directories to organize the project
+
+/infra
+/env/Dev
+/env/Prod
+
+### Configuring the keys
+
+#### Production environment
+
+Move the `.pem` file to the `/env/Prod` directory.
+
+#### Development environment
+
+Move the `.pem` file to the `/env/Dev` directory.
+
 ## Terraform
 
 ### Deploying the infrastructure using Terraform
@@ -23,6 +58,20 @@ This project is an example of how to use Terraform, Ansible, and AWS to deploy a
 ### Destroying the infrastructure using Terraform
 
 1. Run Terraform to destroy the infrastructure: `terraform destroy`
+
+### Updating the infrastructure using Terraform
+
+1. Run Terraform to update the infrastructure: `terraform apply`
+
+### Get Terraform outputs
+
+1. Run Terraform to get the outputs: `terraform output`
+
+### Initializing the environment
+
+Every environment with main.tf must be initialized before applied.
+
+1. Initialize the environment. At the environment directory, run: `terraform init`
   
 ### Terraform files explanation
 
@@ -58,6 +107,19 @@ This is a bash script for a system that uses the yum package manager, such as Am
 5. `systemctl enable httpd`: This command sets the Apache HTTP Server to start automatically when the system boots up.
 
 In summary, this script updates the system, installs the Apache HTTP Server, starts the server, and sets it to start automatically on boot.
+
+### Create Terraform files
+
+#### main.tf
+
+Inside `/infra` create `main.tf`, this file will be used as an entry point for Terraform.
+Also create `variables.tf` and `outputs.tf`.
+Inside `/env/Dev` create `main.tf`.
+Inside `/env/Prod` create `main.tf`.
+
+### Security groups
+
+
 
 
 ## Ansible
@@ -109,6 +171,10 @@ Note that the `restart_server` task uses the `service` module from the Ansible c
 
 #### playbook.yml
 
+Inside `/infra` create `playbook.yml`.
+Inside `/env/Dev` create `playbook.yml`.
+Inside `/env/Prod` create `playbook.yml`.
+
 This Ansible playbook is used to automate the deployment of a Django web application on an EC2 instance. Here's a step-by-step explanation of the tasks in the playbook:
 
 1. Install python3 and virtualenv:
@@ -125,7 +191,7 @@ This Ansible playbook is used to automate the deployment of a Django web applica
 
     This task uses the `yum` module to install the `python3` and `virtualenv` packages on the remote host. The `become: yes` line is used to elevate the user's privileges to root.
 &nbsp;
-2. Install Django and Django Rest Framework:
+1. Install Django and Django Rest Framework:
 
     ```yaml
     - name: Installing dependencies with pip (Django and Django Rest)
@@ -138,7 +204,7 @@ This Ansible playbook is used to automate the deployment of a Django web applica
 
     This task uses the `pip` module to install the `django` and `djangorestframework` packages in the virtual environment located at `/home/ec2-user/web/venv`.
 &nbsp;
-3. Start the Django project:
+1. Start the Django project:
 
     ```yaml
     - name: Starting the Project
@@ -148,7 +214,7 @@ This Ansible playbook is used to automate the deployment of a Django web applica
 
     This task uses the `shell` module to execute a shell command that activates the virtual environment and then creates a new Django project named `setup` in the `/home/ec2-user/web/` directory.
 &nbsp;
-4. Change the hosts in the settings.py file:
+1. Change the hosts in the settings.py file:
 
     ```yaml
     - name: Changing the hosts in the settings.py file

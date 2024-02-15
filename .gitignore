@@ -45,3 +45,10 @@ terraform.rc
 # Secret keys
 *.pem
 *.key
+*.pub
+IaC-DEV
+IaC-PROD
+.key
+.keys
+.ssh
+
