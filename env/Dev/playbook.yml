@@ -14,9 +14,14 @@
         name:
         - django
         - djangorestframework
+    - name: Verifying if the project already exists
+      stat: # checking if the file exists in the directory
+        path: /home/ec2-user/web/setup/settings.py
+      register: project_exists # registering the result of the stat command, in this case True or False
     - name: Starting the Project
       shell: '. /home/ec2-user/web/venv/bin/activate; django-admin startproject setup /home/ec2-user/web/'
-      # ignore_errors: yes
+      when: not project_exists.stat.exists # if the project doesn't exist, start the project
+      # ignore_errors: yes # if the project already exists, ignore the error. By default, Ansible will fail the playbook if the project already exists. Use this parameter with caution, evaluate possible issues that may occur.
     - name: Changing the hosts in the settings.py file
       lineinfile:
         path: /home/ec2-user/web/setup/settings.py

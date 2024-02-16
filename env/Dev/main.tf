@@ -5,6 +5,7 @@ module "aws-dev" {
   # instance_name = "dev-server"
   aws_region = "us-west-2"
   instance_SSHKey = "IaC-DEV"
+  securityGroup = "Dev"
 }
 
 output "dev_ip" {

@@ -1,7 +1,7 @@
 resource "aws_security_group" "general_access" {
-  name = "general_access"
-  description = "Allow general access"
-  vpc_id = aws_vpc.main.id
+  name = "var.securityGroup"
+  # description = ""
+  # vpc_id = aws_vpc.main.id
 
   ingress { # Allow incoming traffic("listen")
     from_port = 0
@@ -20,5 +20,4 @@ resource "aws_security_group" "general_access" {
   tags = {
     Name = "general_access"
   }
-
 }

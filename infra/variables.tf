@@ -31,10 +31,10 @@ variable "instance_type" {
 #   type = string
 #   # default = "my-ec2-key"
 # }
-# variable "instance_sg" {
-#   type = string
-#   # default = "my-ec2-sg"
-# }
+variable "securityGroup" {
+  type = string
+  # default = "my-ec2-sg"
+}
 # variable "instance_subnet" {
 #   type = string
 #   # default = "my-ec2-subnet"
