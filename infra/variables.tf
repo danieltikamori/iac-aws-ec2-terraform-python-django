@@ -17,6 +17,20 @@ variable "instance_type" {
 #   type = int
 #   # default = 1
 # }
+variable "minSize" {
+  type = number
+}
+variable "maxSize" {
+  type = number
+}
+# variable "desiredCapacity" {
+#   type = number
+# }
+# variable "instance_user" {
+#   type = string
+#   # default = "ec2-user"
+# }
+
 # variable "instance_name" {
 #   type = string
 #   # default = "my-ec2-instance"
@@ -83,3 +97,7 @@ variable "securityGroup" {
 #   type = string
 #   # default = "snap-0b9b9e7b9b9b9b9b"
 # }
+
+variable "asGroupName" {
+  type = string
+}

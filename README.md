@@ -131,7 +131,8 @@ Create or go to the `infra/security_group.tf` file and add this resource and mod
 
 ```terraform
 resource "aws_security_group" "<desired name>" {
-  name = "var.securityGroup"
+  name = var.securityGroup # <desired name>
+
   # description = ""
   # vpc_id = aws_vpc.main.id
 
@@ -155,6 +156,13 @@ resource "aws_security_group" "<desired name>" {
 }
 ```
 
+It is recommended to create several security groups(resource "aws_security_group") for each environment. Each environment requires proper ports and protocols
+> Note that you need to replace `<desired name>` with a desired name for your security group.
+
+- Also note that if you want to associate this security group with an IP range (for example, only allow access from certain IP addresses), you can use the `cidr_blocks` attribute.
+
+- Also note that if you want to use an existing VPC instead of creating one in this module, you can use the `vpc_id` attribute.
+
 Then in `infra/main.tf` file, add at the launch template:
 
 ```terraform
@@ -170,6 +178,57 @@ module "aws-<environment>" {
 securityGroup = "<environment>" # E.g.: Dev, Test, Production
 }
 ```
+
+### Autoscaling group
+
+Use aws_launch_template to create autoscaling group instead of aws_instance.
+
+```terraform
+resource "aws_launch_template" "machine" {
+  image_id      = "ami-01e82af4e524a0aa3"
+  instance_type = var.instance_type
+  key_name      = var.instance_SSHKey
+  user_data = filebase64("ansible.sh") # Converts to base64 and adds to user_data field, otherwise AWS will not accept it.
+  # user_data = base64encode(file("bootstrap.sh"))
+  security_group_names = [var.securityGroup]
+  # vpc_security_group_ids = [ aws_security_group.securityGroup.id ]
+  tags = {
+    Name = "Terraform Ansible Python"
+  }
+}
+```
+
+At `infra/main.tf` file, add resource "aws_autoscaling_group":
+
+```terraform
+resource "aws_autoscaling_group" "asGroup" {
+  availability_zones = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
+  name = var.asGroupName
+  max_size = var.maxSize
+  min_size = var.minSize
+  # desired_capacity = var.desiredCapacity
+  launch_template {
+    id = aws_launch_template.machine.id
+    version = "$Latest"
+
+  }
+  tag {
+    key = "Name"
+    value = var.asGroupName
+    propagate_at_launch = true
+  }
+}
+```
+
+And at environment's `main.tf` files, add at module aws-<environment>:
+
+```terraform
+  minSize = 1 # Minimum number of instances for production must be at least 1, or it may be offline. For Dev and Staging/Test, it can be 0 as it must be offline sometimes.
+  maxSize = 10
+  # desiredCapacity = 2
+  asGroupName = "<environment>"
+```
+
 
 ## Ansible
 
