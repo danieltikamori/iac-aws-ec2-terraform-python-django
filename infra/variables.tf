@@ -101,3 +101,7 @@ variable "securityGroup" {
 variable "asGroupName" {
   type = string
 }
+
+variable "production" {
+  type = bool
+}

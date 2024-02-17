@@ -229,6 +229,84 @@ And at environment's `main.tf` files, add at module aws-<environment>:
   asGroupName = "<environment>"
 ```
 
+### Load balancer
+
+Add the following code to `infra/main.tf` file to set the load balancer:
+
+```terraform
+resource "aws_alb" "<loadBalancer-main>" {
+  name = "loadBalancer-main"
+  internal = false
+  subnets = [aws_default_subnet.defaultSubnet_az1.id, aws_default_subnet.defaultSubnet_az2.id]
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the load balancer. Otherwise, it will not.
+  # security_groups = [aws_security_group.general_access.id]
+  
+}
+
+resource "aws_alb_listener" "albListener" {
+  load_balancer_arn = aws_alb.loadBalancer-main[0].arn
+  port = 8000
+  protocol = "HTTP"
+  default_action {
+    type = "forward"
+    target_group_arn = aws_alb_target_group.albTargetGroup[0].arn # As we are usin the count variable, we need to specify the index of the target group and other resources related to the load balancer.
+  }
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the load balancer listener. Otherwise, it will not.
+}
+
+resource "aws_alb_target_group" "albTargetGroup" {
+  name = "machinesTargetGroup"
+  port = 8000
+  protocol = "HTTP"
+  vpc_id = aws_default_vpc.default.id
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the target group. Otherwise, it will not.
+}
+
+resource "aws_default_vpc" "default" {
+
+}
+
+resource "aws_autoscaling_policy" "production-scaling" {
+  name = "terraform-production-scaling"
+  autoscaling_group_name = var.asGroupName
+  policy_type = "TargetTrackingScaling"
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 50.0
+  }
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the autoscaling policy. Otherwise, it will not.
+}
+```
+
+To define if the environment will have load balancer or not, at environments `main.tf` files, add inside the module:
+
+```terraform
+production = true # Or false if don´t want to use load balancer
+```
+
+### Defining the configuration for each environment using the ternary operator
+
+In the code above, it is already configured.
+
+For example at the launch template:
+
+```terrform
+user_data = var.production ? filebase64("ansible.sh") : "" # Ternary operator that verifies if production is true. Converts the file into a base64 encoded string to be used in the launch template.
+```
+
+Another example to define if the environment will have load balancer or not:
+
+```terraform
+resource "aws_autoscaling_group" "name" {
+......
+target_group_arns = var.production ? [aws_alb_target_group.albTargetGroup[0].arn] : [] # Ternary operator that verifies if production is true. If it is, it will add the target group to the autoscaling group. Otherwise, it will not.
+  # As we are using the count parameter for the load balancer, we must specify the index of the resources related to the load balancer.
+}
+```
+
+For the load balancer, it is necessary to create ternary operators across related resources and specify the index of the related resources where necessary.
 
 ## Ansible
 

@@ -19,7 +19,7 @@ resource "aws_launch_template" "machine" {
   # image_id      = "ami-01e82af4e524a0aa3" # Amazon Linux 2023
   instance_type = var.instance_type
   key_name      = var.instance_SSHKey
-  user_data = filebase64("ansible.sh") # Converts the file into a base64 encoded string to be used in the launch template. Otherwise AWS will not be able to use it.
+  user_data = var.production ? filebase64("ansible.sh") : "" # Ternary operator that verifies if production is true. Converts the file into a base64 encoded string to be used in the launch template. Otherwise AWS will not be able to use it.
   # user_data = base64encode(file("bootstrap.sh"))
   security_group_names = [var.securityGroup]
   # vpc_security_group_ids = [ aws_security_group.securityGroup.id ]
@@ -63,7 +63,8 @@ resource "aws_autoscaling_group" "asGroup" {
     id = aws_launch_template.machine.id
     version = "$Latest"
   }
-  target_group_arns = [aws_alb_target_group.albTargetGroup.arn]
+  target_group_arns = var.production ? [aws_alb_target_group.albTargetGroup[0].arn] : [] # Ternary operator that verifies if production is true. If it is, it will add the target group to the autoscaling group. Otherwise, it will not.
+  # As we are using the count parameter for the load balancer, we must specify the index of the resources related to the load balancer.
 
   tag {
     key = "Name"
@@ -84,18 +85,20 @@ resource "aws_alb" "loadBalancer-main" {
   name = "loadBalancer-main"
   internal = false
   subnets = [aws_default_subnet.defaultSubnet_az1.id, aws_default_subnet.defaultSubnet_az2.id]
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the load balancer. Otherwise, it will not.
   # security_groups = [aws_security_group.general_access.id]
   
 }
 
 resource "aws_alb_listener" "albListener" {
-  load_balancer_arn = aws_alb.loadBalancer-main.arn
+  load_balancer_arn = aws_alb.loadBalancer-main[0].arn
   port = 8000
   protocol = "HTTP"
   default_action {
     type = "forward"
-    target_group_arn = aws_alb_target_group.albTargetGroup.arn
+    target_group_arn = aws_alb_target_group.albTargetGroup[0].arn # As we are usin the count variable, we need to specify the index of the target group and other resources related to the load balancer.
   }
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the load balancer listener. Otherwise, it will not.
 }
 
 resource "aws_alb_target_group" "albTargetGroup" {
@@ -103,6 +106,7 @@ resource "aws_alb_target_group" "albTargetGroup" {
   port = 8000
   protocol = "HTTP"
   vpc_id = aws_default_vpc.default.id
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the target group. Otherwise, it will not.
 }
 
 resource "aws_default_vpc" "default" {
@@ -119,4 +123,5 @@ resource "aws_autoscaling_policy" "production-scaling" {
     }
     target_value = 50.0
   }
+  count = var.production ? 1 : 0 # Ternary operator that verifies if production is true. If it is, it will create the autoscaling policy. Otherwise, it will not.
 }

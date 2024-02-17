@@ -11,6 +11,7 @@ module "aws-prod" {
   maxSize = 10
   # desiredCapacity = 2
   asGroupName = "Prod"
+  production = true
 }
 
 # output "prod_ip" {

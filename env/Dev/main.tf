@@ -10,6 +10,7 @@ module "aws-dev" {
   maxSize = 1
   # desiredCapacity = 0
   asGroupName = "Dev"
+  production = false
 }
 
 # output "dev_ip" {
