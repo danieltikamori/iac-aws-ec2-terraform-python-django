@@ -266,6 +266,138 @@ In the same `role.tf` file, paste the following at the end:
 resource "aws_iam_instance_profile" "beanstalk_ec2_profile" {
   name = "beanstalk-ec2-profile"
   role = aws_iam_role.beanstalk_ec2.name
-  
+
+}
+```
+
+### Create the Beanstalk application
+
+See: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elastic_beanstalk_application
+
+At infra/ directory, create `beanstalk.tf` file and paste this code:
+
+```terraform
+resource "aws_elastic_beanstalk_application" "beanstalk_application" {
+  name        = var.name
+  description = var.description
+}
+```
+
+At `infra/variables.tf` file, add the `description` variable:
+
+```terraform
+variable "description" {
+  type = string
+}
+```
+
+#### Create the elastic beanstalk environment
+
+See: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elastic_beanstalk_environment
+
+In the `infra/beanstalk.tf` file, add the following block of code after the `aws_elastic_beanstalk_application` resource:
+
+```terraform
+resource "aws_elastic_beanstalk_application" "beanstalk_application" {
+  name        = var.name
+  description = var.description
+}
+
+resource "aws_elastic_beanstalk_environment" "beanstalk_environment" {
+  name                = var.environment
+  application         = aws_elastic_beanstalk_application.beanstalk_application.name
+  solution_stack_name = "64bit Amazon Linux 2023 v4.2.1 running Docker" # see: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.platforms.html#concepts.platforms.list In our case, use Docker: https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html#platforms-supported.docker Copy the description and paste at solution_stack_name
+}
+```
+
+At `infra/variables.tf` file, add the `environment` variable:
+
+```terraform
+variable "environment" {
+  type = string
+}
+```
+
+#### Improving the environment
+
+See: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elastic_beanstalk_environment#option-settings
+
+In the `infra/beanstalk.tf` file, inside the `resource "aws_elastic_beanstalk_environment"` block, insert:
+
+```terraform
+  setting { # Set the instance type
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "InstanceType"
+    value     = var.machine
+  }
+
+    setting { # Set the autoscaling max number of instances
+    namespace = "aws:autoscaling:asg"
+    name      = "MaxSize"
+    value     = var.maxSize
+  }
+    setting { # Set the profile to be used
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "IamInstanceProfile"
+    value     = aws_iam_instance_profile.beanstalk_ec2_profile.name
+  }
+```
+
+For this project, the code above is fine. Set for your project using the documentation: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/command-options.html
+
+Create the `machine` and `maxSize` variables at `infra/variables.tf` file:
+
+```terraform
+variable "machine" {
+  type = string
+}
+
+variable "maxSize" {
+  type = number
+}
+```
+
+### Production and Homologation
+
+Create a new file at `env/Prod`, you may name as you wish but must have `.tf` extension (e.g., `env/Prod/main.tf`). Inside this file add:
+
+```terraform
+module "Production" {
+  source = "../../infra" # To return the infra/ directory
+  name = "production"
+  description = "production-application"
+  maxSize = 5
+  machine = "t2.micro"
+  environment = "production-environment"
+}
+```
+
+**It is important to keep some attributes in lower case to avoid incompatibilities at ECR repository.**
+For example `name`, `description` and `environment`.
+
+Then at the `Prod` directory, copy `backend.tf` and `main.tf` files and paste them into the `env/homolog` folder. After that, you can use this module in a similar way as above but changing the `Production` into `Homologation`:
+
+`backend.tf` file:
+
+```terraform
+terraform {
+  backend "s3" {
+    bucket = "terraform-state-alura-iac"
+    key    = "homolog/terraform.tfstate"
+    region = "us-west-2"
+  }
+}
+```
+
+`main.tf` file:
+
+```terraform
+module "Homologation" {
+  source = "../../infra"
+  name = "homologation"
+  description = "homologation-application"
+  maxSize = 3
+  machine = "t2.micro"
+  environment = "homologation-environment"
 }
 ```
