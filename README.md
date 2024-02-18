@@ -82,3 +82,84 @@ It will set the variable "name".
 
 Now if we run Terraform, we can see that it creates the ECR repo on the AWS console to put our Docker images.
 
+## Aplication
+
+Git clone the repository of your project to the project directory. E.g.:
+
+```bash
+git clone https://github.com/guilhermeonrails/clientes-leo-api
+```
+
+Now put the application into a Docker image. Create a `Dockerfile` file in the folder of your cloned project.
+Example:
+
+`clientes-leo-api/Dockerfile`
+
+Define the project components inside this Docker container. See the documentation:
+[Docker samples documentation](https://docs.docker.com/samples/)
+
+Python example:
+
+```dockerfile
+# syntax=docker/dockerfile:1.4
+
+FROM --platform=$BUILDPLATFORM python:3.7-alpine AS builder
+EXPOSE 8000
+WORKDIR /app
+COPY requirements.txt /app
+RUN pip3 install -r requirements.txt --no-cache-dir
+COPY . /app
+ENTRYPOINT ["python3"]
+CMD ["manage.py", "runserver", "0.0.0.0:8000"]
+
+FROM builder as dev-envs
+RUN <<EOF
+apk update
+apk add git
+EOF
+
+RUN <<EOF
+addgroup -S docker
+adduser -S --shell /bin/bash --ingroup docker vscode
+EOF
+# install Docker tools (cli, buildx, compose)
+COPY --from=gloursdocker/docker / /
+CMD ["manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+Or the code in this project:
+
+```dockerfile
+# FROM --platform=$BUILDPLATFORM python:3.7-alpine AS builder
+FROM  python:3
+ENV PYTHONDONTWRITEBYTECODE=1
+# Python don´t write bytecode as it is unnecessary for most projects using containarization.
+ENV PYTHONUNBUFFERED=1
+# Don´t use buffer as it is unnecessary for most projects using containarization.
+WORKDIR /home/ubuntu/tcc/
+# Work directory
+COPY . /home/ubuntu/tcc/
+# Copies everything to the work directory
+RUN pip3 install -r requirements.txt --no-cache-dir
+# Installs the libraries / required components
+RUN sed -i "s/ALLOWED_HOSTS = \[\]/ALLOWED_HOSTS = \['*'\]/" setup/settings.py
+# Allows to respond to any requests without having a specific domain name configured
+RUN python3 manage.py migrate
+# Database migration
+RUN python manage.py loaddata clientes.json
+# Load initial database data from json file
+ENTRYPOINT python manage.py runserver 0.0.0.0:8000
+# Run server on port 8000 of IP address 0.0.0.0
+EXPOSE 8000
+# Exposed the 8000 port
+```
+
+### Build the image
+
+Open the terminal and at the application directory (`clientes-leo-api/`), run:
+
+```bash
+docker build . -t production:V1
+```
+
+You may change the image name to something more meaningful if you want. The `-f` flag can be used to specify another Dockerfile. The `-t` flag allows you to tag your image with an alias so that you can refer to. This command will generate an image with the tag `production:V1`. `V1` refers to the production Dockerfile version 1.
