@@ -163,3 +163,109 @@ docker build . -t production:V1
 ```
 
 You may change the image name to something more meaningful if you want. The `-f` flag can be used to specify another Dockerfile. The `-t` flag allows you to tag your image with an alias so that you can refer to. This command will generate an image with the tag `production:V1`. `V1` refers to the production Dockerfile version 1.
+
+## Permissions on AWS
+
+Apply always the least privilege principle, so give only what is necessary on demand.
+
+As long as possible, use the "jsonencode" function to avoid `json` formatting errors.
+Terraform's "jsonencode" function converts a Terraform expression result to valid JSON syntax.
+
+### Creating AWS Roles through the Terraform
+
+See the documentation: [Terraform AWS iam_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)
+
+Create a file named `role.tf` at infra/ directory and insert the following code:
+
+```terraform
+resource "aws_iam_role" "beanstalk_ec2" {
+  name = "beanstalk-ec2-role"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  # tags = {
+  #   tag-key = "tag-value"
+  # }
+}
+```
+
+#### Building policies
+
+Then see this documentation: [iam_role_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy).
+
+In the same `role.tf` file, paste the following below the previous code:
+
+```terraform
+resource "aws_iam_role_policy" "beanstalk_ec2_policy" {
+name = "beanstalk-ec2-policy"
+role = aws_iam_role.beanstalk_ec2.id
+
+# Terraform's "jsonencode" function converts a
+
+# Terraform expression result to valid JSON syntax.
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+       Action = [
+          "cloudwatch:PutMetricData", # Visualize metrics through CloudWatch
+          "ds:CreateComputer", # Create computers
+          "ds:DescribeDirectories", # Describe directories to be able to change some of their properties
+          "ec2:DescribeInstanceStatus", # Describe instances status to check if they are running
+          "logs:*", # Store logs
+          "ssm:*", # Manage SSM parameters
+          "ec2messages:*", # Receive messages from other Amazon EC2 instances - communication between instances to improve load distribution at the load balancer
+          "ecr:GetAuthorizationToken", # Get authorization token to pull images from ECR
+          "ecr:BatchCheckLayerAvailability", # Check availability of layers in ECR
+          "ecr:GetDownloadUrlForLayer", # Get download URL for layers in ECR
+          "ecr:GetRepositoryPolicy", # Get repository policy
+          "ecr:DescribeRepositories", # Describe repositories
+          "ecr:ListImages", # List images
+          "ecr:DescribeImages", # Describe images
+          "ecr:BatchGetImage", # Get images from ECR
+          "s3:*", # Create, read, update, and delete objects in Amazon S3 buckets
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+```
+
+Find the permissions at:
+
+ECR:
+https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_Operations.html
+
+EC2:
+https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Operations.html
+
+#### Building the IAM instance profile
+
+See: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
+
+In the same `role.tf` file, paste the following at the end:
+
+```terraform
+resource "aws_iam_instance_profile" "beanstalk_ec2_profile" {
+  name = "beanstalk-ec2-profile"
+  role = aws_iam_role.beanstalk_ec2.name
+  
+}
+```
