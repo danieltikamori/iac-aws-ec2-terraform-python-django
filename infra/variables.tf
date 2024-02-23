@@ -17,4 +17,3 @@ variable "machine" {
 variable "maxSize" {
   type = number
 }
-

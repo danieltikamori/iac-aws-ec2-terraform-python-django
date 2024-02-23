@@ -1,5 +1,5 @@
 resource "aws_iam_role" "beanstalk_ec2" {
-  name = "beanstalk-ec2-role"
+  name = "beanstalk-ec2-role-${var.name}"
 
   # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
@@ -23,8 +23,8 @@ resource "aws_iam_role" "beanstalk_ec2" {
 }
 
 resource "aws_iam_role_policy" "beanstalk_ec2_policy" {
-name = "beanstalk-ec2-policy"
-role = aws_iam_role.beanstalk_ec2.id
+  name = "beanstalk-ec2-policy"
+  role = aws_iam_role.beanstalk_ec2.id
 
 # Terraform's "jsonencode" function converts a
 
@@ -60,7 +60,7 @@ role = aws_iam_role.beanstalk_ec2.id
 }
 
 resource "aws_iam_instance_profile" "beanstalk_ec2_profile" {
-  name = "beanstalk-ec2-profile"
+  name = "beanstalk-ec2-profile-${var.name}"
   role = aws_iam_role.beanstalk_ec2.name
   
 }
